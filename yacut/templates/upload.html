@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}YaCut - загрузка файлов{% endblock %}
+
+{% block content %}
+<section class="container my-5 px-4">
+  <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+  <p class="text-center my-4">
+    Загрузите файл и получите короткую ссылку
+  </p>
+
+  <div class="container">
+    <div class="row my-3">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <form method="POST" action="{{ url_for('views.upload_file') }}" enctype="multipart/form-data">
+          {{ form.csrf_token }}
+          <div>
+            <div>
+              {{ form.files(class="form-control form-control-lg py-2 mb-3", multiple=True) }}
+              {% if form.files.errors %}
+                <p><span style="color:red">{{ form.files.errors[0] }}</span></p>
+              {% endif %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary", value="Загрузить") }}
+          </div>
+        </form>
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container">
+        <div class="row">
+          <div class="col-sm">
+          </div>
+          <div class="col-sm">
+            {% for category, message in messages %}
+              <p class="text-center">
+                <h5 class="text-center">{{ message }}</h5>
+              </p>
+            {% endfor %}
+          </div>
+          <div class="col-sm">
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% if short_links %}
+  <div class="container">
+    <div class="row">
+      <div class="col-sm">
+      </div>
+      <div class="col-sm">
+        <h5 class="text-center">Загруженные файлы:</h5>
+        {% for filename, link in short_links %}
+          <p class="text-center">{{ filename }}: <a href="{{ link }}">{{ link }}</a></p>
+        {% endfor %}
+      </div>
+      <div class="col-sm">
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</section>
+{% endblock %}
