@@ -1,4 +1,5 @@
-import validators as url_validators
+from urllib.parse import urlparse
+
 from wtforms.validators import ValidationError
 
 from yacut.constants import RESERVED_PATHS, SHORT_ID_LENGTH, SHORT_ID_PATTERN
@@ -6,7 +7,10 @@ from yacut.models import URLMap
 
 
 def validate_url(url):
-    return bool(url and url_validators.url(url))
+    if not url:
+        return False
+    parsed = urlparse(url)
+    return bool(parsed.scheme and parsed.netloc)
 
 
 def validate_short_id(short_id):
