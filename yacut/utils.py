@@ -59,8 +59,9 @@ async def ensure_folder(session, headers):
 async def upload_to_yandex_disk(file, token):
     headers = {'Authorization': f'OAuth {token}'}
     filename = file.filename
-    remote_path = f'{
-        Config.YANDEX_APP_PREFIX}{Config.YANDEX_APP_FOLDER}/{filename}'
+    remote_path = (
+        f'{Config.YANDEX_APP_PREFIX}{Config.YANDEX_APP_FOLDER}/{filename}'
+    )
     async with aiohttp.ClientSession() as session:
         await ensure_folder(session, headers)
         payload = {'path': remote_path, 'overwrite': 'false'}
