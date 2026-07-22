@@ -1,4 +1,5 @@
 import os
+from http import HTTPStatus
 
 from flask import Blueprint, flash, redirect, render_template, request
 from markupsafe import Markup
@@ -6,12 +7,8 @@ from markupsafe import Markup
 from yacut.exceptions import FileUploadError, ShortIDGenerationError
 from yacut.forms import FileUploadForm, URLMapForm
 from yacut.models import URLMap, db
-from yacut.utils import (
-    build_short_link,
-    get_unique_short_id,
-    normalize_url,
-    upload_to_yandex_disk,
-)
+from yacut.utils import (build_short_link, get_unique_short_id, normalize_url,
+                         upload_to_yandex_disk)
 from yacut.validators import is_reserved_path
 
 views_bp = Blueprint('views', __name__)
@@ -53,10 +50,10 @@ def index():
 @views_bp.route('/<short_id>')
 def redirect_to_original(short_id):
     if is_reserved_path(short_id):
-        return render_template('404.html'), 404
+        return render_template('404.html'), HTTPStatus.NOT_FOUND
     url_map = URLMap.query.filter_by(short=short_id).first()
     if not url_map:
-        return render_template('404.html'), 404
+        return render_template('404.html'), HTTPStatus.NOT_FOUND
     return redirect(url_map.original)
 
 
@@ -117,4 +114,4 @@ def _flash_upload_results(short_links):
 
 @views_bp.errorhandler(404)
 def page_not_found(error):
-    return render_template('404.html'), 404
+    return render_template('404.html'), HTTPStatus.NOT_FOUND

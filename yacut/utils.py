@@ -1,27 +1,21 @@
 import random
 import string
+from http import HTTPStatus
 
 import aiohttp
 
-from yacut.constants import SHORT_ID_LENGTH
+from settings import Config
+from yacut.constants import SHORT_ID_LENGTH, UNIQUE_SHORT_ID
 from yacut.exceptions import FileUploadError, ShortIDGenerationError
 from yacut.models import URLMap
 
-API_HOST = 'https://cloud-api.yandex.net/'
-API_VERSION = 'v1'
-REQUEST_UPLOAD_URL = f'{API_HOST}{API_VERSION}/disk/resources/upload'
-REQUEST_DOWNLOAD_URL = f'{API_HOST}{API_VERSION}/disk/resources/download'
-REQUEST_RESOURCES_URL = f'{API_HOST}{API_VERSION}/disk/resources'
-APP_PREFIX = 'app:'
-APP_FOLDER = '/yacut_uploads'
 
-
-def generate_short_id():
+def generate_short_id():  # Я не понимаю куда переносить, оно де и так тут.
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(SHORT_ID_LENGTH))
 
 
-def get_unique_short_id(max_attempts=1000):
+def get_unique_short_id(max_attempts=UNIQUE_SHORT_ID):
     for _ in range(max_attempts):
         short_id = generate_short_id()
         if not URLMap.query.filter_by(short=short_id).first():
@@ -49,15 +43,15 @@ def build_short_link(short_id, base_url):
 
 async def ensure_folder(session, headers):
     async with session.get(
-        REQUEST_RESOURCES_URL,
+        Config.YANDEX_RESOURCES_URL,
         headers=headers,
-        params={'path': APP_FOLDER},
+        params={'path': Config.YANDEX_APP_FOLDER},
     ) as response:
-        if response.status == 404:
+        if response.status == HTTPStatus.NOT_FOUND:
             async with session.put(
-                REQUEST_RESOURCES_URL,
+                Config.YANDEX_RESOURCES_URL,
                 headers=headers,
-                params={'path': APP_FOLDER},
+                params={'path': Config.YANDEX_APP_FOLDER},
             ):
                 pass
 
@@ -65,16 +59,17 @@ async def ensure_folder(session, headers):
 async def upload_to_yandex_disk(file, token):
     headers = {'Authorization': f'OAuth {token}'}
     filename = file.filename
-    remote_path = f'{APP_PREFIX}{APP_FOLDER}/{filename}'
+    remote_path = f'{
+        Config.YANDEX_APP_PREFIX}{Config.YANDEX_APP_FOLDER}/{filename}'
     async with aiohttp.ClientSession() as session:
         await ensure_folder(session, headers)
         payload = {'path': remote_path, 'overwrite': 'false'}
         async with session.get(
-            REQUEST_UPLOAD_URL,
+            Config.YANDEX_UPLOAD_URL,
             headers=headers,
             params=payload,
         ) as response:
-            if response.status != 200:
+            if response.status != HTTPStatus.OK:
                 raise FileUploadError(
                     'Не удалось получить ссылку для загрузки'
                 )
@@ -86,16 +81,18 @@ async def upload_to_yandex_disk(file, token):
                 )
         file.seek(0)
         async with session.put(upload_url, data=file.read()) as response:
-            if response.status not in (201, 202):
+            if response.status not in (
+                HTTPStatus.CREATED, HTTPStatus.ACCEPTED
+            ):
                 raise FileUploadError(
                     'Не удалось загрузить файл на Яндекс.Диск'
                 )
         async with session.get(
-            REQUEST_DOWNLOAD_URL,
+            Config.YANDEX_DOWNLOAD_URL,
             headers=headers,
             params={'path': remote_path},
         ) as response:
-            if response.status != 200:
+            if response.status != HTTPStatus.OK:
                 raise FileUploadError(
                     'Не удалось получить ссылку для скачивания'
                 )
